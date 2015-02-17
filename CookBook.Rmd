@@ -1,0 +1,118 @@
+---
+title: "CookBook"
+output: md_document
+---
+This is project for Coursera getdata-011 course.
+
+
+
+## Load libraries
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(reshape2)
+```
+
+## Set working directory and Read data files
+
+```{r}
+setwd("E://Projects//R//getdata-011//as1//UCI HAR Dataset")
+d_Act_Test  <- read.table( "test//Y_test.txt"   ,header = FALSE)
+d_Act_Train <- read.table( "train//Y_train.txt" ,header = FALSE)
+d_Sub_Test  <- read.table( "test//subject_test.txt"   ,header = FALSE)
+d_Sub_Train <- read.table( "train//subject_train.txt" ,header = FALSE)
+d_Feat_Test <- read.table( "test//X_test.txt"  ,header = FALSE)
+d_Feat_Train <- read.table("train//X_train.txt",header = FALSE)
+d_Feat_Names <- read.table("features.txt",header = FALSE)
+Act_Labels   <- read.table("activity_labels.txt",header = FALSE)
+```
+
+
+# 1. Merges the training and the test sets to create one data set
+
+```{r}
+d_Act <- rbind(d_Act_Test,d_Act_Train)
+d_Sub <- rbind(d_Sub_Test,d_Sub_Train)
+d_Feat <- rbind(d_Feat_Test,d_Feat_Train)
+
+rm(list=c("d_Act_Test","d_Act_Train","d_Sub_Test","d_Sub_Train","d_Feat_Test","d_Feat_Train"))
+```
+
+## Add column names
+
+```{r}
+names(d_Act)  <- c("Activity")
+head(d_Act)
+names(d_Sub)  <- c("Subject")
+head(d_Sub)
+names(d_Feat) <- d_Feat_Names[,2]
+names(d_Feat)
+names(Act_Labels) <- c("Activity","ActivityName")
+head(Act_Labels)
+```
+# 2. Extracts only the measurements on the mean and standard deviation for each measurement
+
+```{r}
+d <- d_Feat[,grep("mean\\(\\)|std\\(\\)",d_Feat_Names[,2])]
+names(d)
+```
+
+## Marge data by comlumns
+
+```{r}
+d <- cbind(d,d_Sub,d_Act)
+names(d)
+rm(list=c("d_Feat","d_Sub","d_Act","d_Feat_Names"))
+```
+
+# 3. Uses descriptive activity names to name the activities in the data set
+
+```{r}
+d <- merge(x=d,y=Act_Labels,by="Activity")
+str(d)
+```
+
+# 4. Appropriately labels the data set with descriptive variable names. 
+
+
+Rename columns:  
+. t -> time  
+. f -> frequency  
+. Acc -> Accelerometer  
+. BodyBody -> Body  
+. Gyro -> Gyroscope  
+. Mag -> Magnitude  
+
+
+```{r}
+names(d)<-gsub("^t", "time", names(d))            # t -> time
+names(d)<-gsub("^f", "frequency", names(d))       # f -> frequency
+names(d)<-gsub("Acc", "Accelerometer", names(d))  # Acc -> Accelerometer
+names(d)<-gsub("BodyBody", "Body", names(d))      # BodyBody -> Body
+names(d)<-gsub("Gyro", "Gyroscope", names(d))     # Gyro -> Gyroscope
+names(d)<-gsub("Mag", "Magnitude", names(d))      # Mag -> Magnitude
+str(d)
+```
+
+# 5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+Convert to long format
+```{r}
+d_rows <-  melt(d, id=c("Activity","ActivityName","Subject"))
+names(d_rows)
+```
+Compute means
+```{r}
+d_avg  <-  dcast(data = d_rows, formula = Activity+ActivityName+Subject~variable, fun.aggregate = mean)
+names(d_avg)
+```
+
+## Write the file
+
+```{r}
+write.table(x = d_avg, file = "Dataset_out.txt", row.names = FALSE)
+```
+
+## END
+
